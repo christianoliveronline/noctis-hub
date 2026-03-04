@@ -603,7 +603,7 @@ td { padding:13px 16px; font-size: 0.941rem; color:var(--ink); vertical-align:mi
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn btn-green" onclick="downloadReport('incidencias','pdf')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Descargar PDF</button>
               <button class="btn btn-outline" onclick="downloadReport('incidencias','csv')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> Exportar CSV</button>
-              <button class="btn btn-outline" onclick="exportToSheets('incidencias')" style="border-color:#0f9d58;color:#0f9d58"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="12" cy="12" r="9"/></svg> Google Sheets</button>
+              <button class="btn btn-outline" onclick="exportToSheets('incidencias')" style="border-color:#0f9d58;color:#0f9d58"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#0f9d58" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="12" cy="12" r="9"/></svg> Google Sheets</button>
             </div>
           </div>
         </div>
@@ -626,7 +626,7 @@ td { padding:13px 16px; font-size: 0.941rem; color:var(--ink); vertical-align:mi
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn btn-green" onclick="downloadReport('departamentos','pdf')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Descargar PDF</button>
               <button class="btn btn-outline" onclick="downloadReport('departamentos','csv')"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> Exportar CSV</button>
-              <button class="btn btn-outline" onclick="exportToSheets('departamentos')" style="border-color:#0f9d58;color:#0f9d58"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="12" cy="12" r="9"/></svg> Google Sheets</button>
+              <button class="btn btn-outline" onclick="exportToSheets('departamentos')" style="border-color:#0f9d58;color:#0f9d58"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#0f9d58" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="12" cy="12" r="9"/></svg> Google Sheets</button>
             </div>
           </div>
         </div>
@@ -682,6 +682,7 @@ td { padding:13px 16px; font-size: 0.941rem; color:var(--ink); vertical-align:mi
               <div class="color-row"><label class="form-label" style="margin:0;width:150px">Color Dorado</label><input type="color" id="cfg-gold" value="#8a6d2e" class="color-swatch" onchange="applyColor('gold',this.value)"><span id="cfg-gold-val" style="font-size:12px;color:var(--ink-muted)">#8a6d2e</span></div>
               <div class="color-row"><label class="form-label" style="margin:0;width:150px">Color Urgente</label><input type="color" id="cfg-red" value="#8b1a1a" class="color-swatch" onchange="applyColor('red',this.value)"><span id="cfg-red-val" style="font-size:12px;color:var(--ink-muted)">#8b1a1a</span></div>
               <div class="color-row"><label class="form-label" style="margin:0;width:150px">Color Fondo</label><input type="color" id="cfg-cream" value="#f5f0e8" class="color-swatch" onchange="applyColor('cream',this.value)"><span id="cfg-cream-val" style="font-size:12px;color:var(--ink-muted)">#f5f0e8</span></div>
+              <div class="color-row"><label class="form-label" style="margin:0;width:150px">Color Seleccionado</label><input type="color" id="cfg-forest-light" value="#e4eed8" class="color-swatch" onchange="applyColor('forest-light',this.value)"><span id="cfg-forest-light-val" style="font-size:0.765rem;color:var(--ink-muted)">#e4eed8</span></div>
               <button class="btn btn-outline btn-sm" onclick="resetColors()" style="margin-top:8px">↺ Restablecer colores</button>
             </div>
           </div>
@@ -1004,7 +1005,7 @@ async function loadAllData() {
     try {
       const cfg = await SB.get('nh_config', '');
       if(cfg && cfg.length) {
-        const colorMap={color_forest:'forest',color_topbar:'topbar',color_gold:'gold',color_red:'red',color_cream:'cream'};
+        const colorMap={color_forest:'forest',color_topbar:'topbar',color_gold:'gold',color_red:'red',color_cream:'cream','color_forest-light':'forest-light'};
         cfg.forEach(row => {
           if(row.key==='font_family'){ applyFont(row.value); }
           if(row.key==='font_size'){ applyFontSize(row.value); const el=document.getElementById('cfg-fontsize');if(el)el.value=row.value; }
@@ -1871,7 +1872,7 @@ async function saveHotel(){
     try{const[saved]=await SB.post('nh_hotels',data);HOTELS.push(saved);}
     catch(e){toast('✗ Error al guardar');return;}
   }
-  closeModal('modal-hotel');renderHotels();toast(editId?'✓ Hotel actualizado':'✗"0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> Hotel añadido');
+  closeModal('modal-hotel');renderHotels();toast(editId?'✓ Hotel actualizado':'✓ Hotel añadido');
 }
 
 async function toggleHotelActive(id){
@@ -1888,7 +1889,7 @@ async function toggleHotelActive(id){
 // CONFIG / COLORS
 // ══════════════════════════════════════════════════════════════
 function applyColor(key, val){
-  const map={forest:'--forest',topbar:'--topbar-bg',gold:'--gold',red:'--red',cream:'--cream'};
+  const map={forest:'--forest',topbar:'--topbar-bg',gold:'--gold',red:'--red',cream:'--cream','forest-light':'--forest-light'};
   if(map[key]) document.documentElement.style.setProperty(map[key], val);
   const valEl=document.getElementById('cfg-'+key+'-val');
   if(valEl) valEl.textContent=val;
@@ -1897,7 +1898,7 @@ function applyColor(key, val){
 async function saveConfig(){
   const fontVal = document.getElementById('cfg-font')?.value || 'Inter,sans-serif';
   const fontSizeVal = document.getElementById('cfg-fontsize')?.value || '17';
-  const keys=['forest','topbar','gold','red','cream'];
+  const keys=['forest','topbar','gold','red','cream','forest-light'];
   const allUpdates = [
     {key:'font_family', value:fontVal},
     {key:'font_size', value:fontSizeVal},
@@ -1947,7 +1948,16 @@ function getReportDateRange(){
 }
 
 function buildCSV(rows,headers){
-  return '\uFEFF'+headers.join(',')+'\n'+rows.map(r=>r.map(c=>'"'+(String(c||'').replace(/"/g,'""'))+'"').join(',')).join('\n');
+  const sep=';'; // semicolon for Excel/Sheets Spanish locale
+  const fmt=v=>{
+    if(!v && v!==0) return '""';
+    let s=String(v);
+    // Format ISO dates nicely
+    if(s.match(/^\d{4}-\d{2}-\d{2}T/)) s=new Date(s).toLocaleString('es-ES');
+    else if(s.match(/^\d{4}-\d{2}-\d{2} \d{2}/)) s=s.slice(0,16).replace('T',' ');
+    return '"'+s.replace(/"/g,'""')+'"';
+  };
+  return '\uFEFF'+headers.map(h=>'"'+h+'"').join(sep)+'\n'+rows.map(r=>r.map(fmt).join(sep)).join('\n');
 }
 
 function downloadCSV(content,filename){
@@ -1997,7 +2007,7 @@ function downloadReport(type,format){
       filename=`noctis-departamentos-${from}.csv`;
     }
 
-    if(content){downloadCSV(content,filename);toast('✗"0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> CSV descargado correctamente');}
+    if(content){downloadCSV(content,filename);toast('✓ Descargado correctamente');}
     return;
   }
 
@@ -2048,7 +2058,7 @@ function downloadReport(type,format){
   }
 
   const w=window.open('','_blank');
-  if(!w){toast('✗"0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Permite ventanas emergentes para generar el PDF');return;}
+  if(!w){toast('✓ Descargado correctamente');return;}
   w.document.write(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>${title}</title>
   <style>
     body{font-family:Arial,sans-serif;padding:40px;color:#1a1208;max-width:1000px;margin:0 auto}
@@ -2068,7 +2078,7 @@ function downloadReport(type,format){
   </body></html>`);
   w.document.close();
   setTimeout(()=>w.print(),500);
-  toast('✗"0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> PDF listo — se abrirá el diálogo de impresión');
+  toast('✓ Descargado correctamente');
 }
 
 function exportToSheets(type){
@@ -2090,7 +2100,7 @@ function exportToSheets(type){
   // Download CSV and show Google Sheets import instructions
   downloadCSV(csv,`noctis-${type}-${from}.csv`);
   setTimeout(()=>{
-    toast('✗"0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg> CSV descargado. En Google Sheets: Archivo → Importar → Subir el CSV');
+    toast('✓ Descargado correctamente');
   },500);
 }
 
@@ -2107,7 +2117,7 @@ async function deleteTemplate(id){
 }
 
 function resetColors(){
-  const defaults={forest:'#2e4a1e',topbar:'#2c2416',gold:'#8a6d2e',red:'#8b1a1a',cream:'#f5f0e8'};
+  const defaults={forest:'#2e4a1e',topbar:'#2c2416',gold:'#8a6d2e',red:'#8b1a1a',cream:'#f5f0e8','forest-light':'#e4eed8'};
   Object.entries(defaults).forEach(([k,v])=>{
     applyColor(k,v);
     const el=document.getElementById('cfg-'+k);if(el)el.value=v;
