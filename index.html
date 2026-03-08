@@ -33,6 +33,7 @@
   --amber-light: #fef3e2;
   --blue: #1a3a5c;
   --blue-light: #e4eef8;
+  --font-body: 'DM Sans',sans-serif;
   --topbar-bg: #2c2416;
   --sidebar-bg: #ffffff;
   --shadow-sm: 0 2px 8px rgba(26,18,8,0.08);
@@ -46,7 +47,7 @@
 /* ─── RESET ─────────────────────────────────────────────────────────── */
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 html { font-size: 17px; overscroll-behavior: none; }
-body { font-family:'DM Sans',sans-serif; background:var(--cream); color:var(--ink); min-height:100vh; overflow-x:hidden; }
+body { font-family:var(--font-body,'DM Sans',sans-serif); background:var(--cream); color:var(--ink); min-height:100vh; overflow-x:hidden; }
 button { font-family:'DM Sans',sans-serif; cursor:pointer; }
 input, select, textarea { font-family:'DM Sans',sans-serif; }
 a { color:inherit; text-decoration:none; }
@@ -190,11 +191,18 @@ a { color:inherit; text-decoration:none; }
 .kpi-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px; }
 .kpi-card { background:white; border-radius:var(--radius); padding:20px; box-shadow:var(--shadow-sm); border:1px solid var(--border); cursor:pointer; transition:all 0.2s; position:relative; overflow:hidden; }
 .kpi-card:hover { box-shadow:var(--shadow-md); transform:translateY(-2px); }
-.kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:4px; }
-.kpi-card.k-green::before { background:var(--forest); }
-.kpi-card.k-red::before { background:var(--red); }
-.kpi-card.k-amber::before { background:#d4830a; }
-.kpi-card.k-gold::before { background:var(--gold); }
+.kpi-card.k-green { background: #2e4a1e; border-color: #2e4a1e; }
+.kpi-card.k-green .kpi-value, .kpi-card.k-green .kpi-label { color: rgba(255,255,255,0.92); }
+.kpi-card.k-green .kpi-icon svg { stroke: rgba(255,255,255,0.7); }
+.kpi-card.k-red { background: #8b1a1a; border-color: #8b1a1a; }
+.kpi-card.k-red .kpi-value, .kpi-card.k-red .kpi-label { color: rgba(255,255,255,0.92); }
+.kpi-card.k-red .kpi-icon svg { stroke: rgba(255,255,255,0.7); }
+.kpi-card.k-amber { background: #7a4a0a; border-color: #7a4a0a; }
+.kpi-card.k-amber .kpi-value, .kpi-card.k-amber .kpi-label { color: rgba(255,255,255,0.92); }
+.kpi-card.k-amber .kpi-icon svg { stroke: rgba(255,255,255,0.7); }
+.kpi-card.k-gold { background: #6b4f1a; border-color: #6b4f1a; }
+.kpi-card.k-gold .kpi-value, .kpi-card.k-gold .kpi-label { color: rgba(255,255,255,0.92); }
+.kpi-card.k-gold .kpi-icon svg { stroke: rgba(255,255,255,0.7); }
 .kpi-icon { font-size: 1.529rem; margin-bottom:10px; }
 .kpi-value { font-family:'Cormorant Garamond',serif; font-size: 2.471rem; font-weight:700; line-height:1; }
 .kpi-label { font-size: 0.765rem; color:var(--ink-muted); margin-top:6px; font-weight:600; text-transform:uppercase; letter-spacing:0.07em; line-height:1.4; }
@@ -794,6 +802,10 @@ td { padding:13px 16px; font-size: 0.941rem; color:var(--ink); vertical-align:mi
       <select class="form-select" id="inc-f-prio"><option value="BAJA">Baja</option><option value="MEDIA" selected>Media</option><option value="ALTA">Alta</option><option value="CRITICA">Crítica</option></select>
       <label class="form-label">Estado</label>
       <select class="form-select" id="inc-f-status"><option value="ABIERTA">Abierta</option><option value="EN_PROCESO">En Proceso</option><option value="RESUELTA">Resuelta</option></select>
+      <label class="form-label">Asignar a <small style="color:var(--ink-muted);font-weight:400">(opcional, puedes seleccionar varios)</small></label>
+      <select class="form-select" id="inc-f-assigned" multiple style="min-height:80px;padding:6px"></select>
+      <label class="form-label" style="margin-top:10px">Alarma para esta incidencia <small style="color:var(--ink-muted);font-weight:400">(opcional)</small></label>
+      <input class="form-input" type="datetime-local" id="inc-f-alarm" style="margin-bottom:4px">
       <label class="form-label">Descripción</label>
       <textarea class="form-textarea" id="inc-f-desc" placeholder="Detalla la incidencia..."></textarea>
       <!-- Update note (only visible when editing) -->
@@ -1001,7 +1013,7 @@ async function loadAllData() {
     if (users && users.length > 0) USERS = users.map(u => ({...u}));
     if (hotels && hotels.length > 0) HOTELS = hotels;
     if (templates && templates.length > 0) TEMPLATES = templates.map(t => ({...t, items: Array.isArray(t.items) ? t.items : JSON.parse(t.items||'[]')}));
-    if (incidents && incidents.length > 0) INCIDENTS = incidents.map(i => ({...i, desc: i.description, by: i.created_by, at: i.created_at, history: Array.isArray(i.history) ? i.history : JSON.parse(i.history||'[]')}));
+    if (incidents && incidents.length > 0) INCIDENTS = incidents.map(i => ({...i, desc: i.description, by: i.created_by, at: i.created_at, assigned_to: i.assigned_to||'[]', history: Array.isArray(i.history) ? i.history : JSON.parse(i.history||'[]')}));
     if (alarms && alarms.length > 0) ALARMS = alarms.map(a => ({...a, time: a.alarm_time}));
 
     CHK = {};
@@ -1120,7 +1132,32 @@ function initApp(){
   // Show WhatsApp summary button for admin+
   const wabtn = document.getElementById('btn-whatsapp-summary');
   if(wabtn) wabtn.style.display = (isS||isA) ? '' : 'none';
+  // Re-apply config after DOM is ready
+  applyConfigFromDB();
+  startAlarmChecker();
+  requestNotifPermission();
   navTo('dashboard');
+}
+
+async function applyConfigFromDB(){
+  try {
+    const cfg = await SB.get('nh_config','');
+    if(!cfg||!cfg.length) return;
+    const colorMap={color_forest:'forest',color_topbar:'topbar',color_gold:'gold',color_red:'red',color_cream:'cream','color_forest-light':'forest-light'};
+    cfg.forEach(row => {
+      if(row.key==='font_family') applyFont(row.value);
+      if(row.key==='font_size') applyFontSize(row.value);
+      if(colorMap[row.key]) {
+        applyColor(colorMap[row.key], row.value);
+        const el=document.getElementById('cfg-'+colorMap[row.key]);
+        if(el) el.value=row.value;
+      }
+      if(row.key==='hotel_name'&&row.value){ const el=document.getElementById('cfg-hotel');if(el)el.value=row.value; }
+      if(row.key==='app_name'&&row.value){ const el=document.getElementById('cfg-appname');if(el)el.value=row.value; }
+      if(row.key==='font_family'){ const el=document.getElementById('cfg-font');if(el)el.value=row.value; }
+      if(row.key==='font_size'){ const el=document.getElementById('cfg-fontsize');if(el)el.value=row.value; }
+    });
+  } catch(e){}
 }
 
 function buildNotifications(){
@@ -1398,42 +1435,113 @@ async function toggleChk(ck){
 function sendWhatsAppSummary(){
   const today=new Date().toISOString().slice(0,10);
   const dateLabel=new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'});
-  const dept=cu.dept;
+  const isS=cu.role==='SUPER_ADMIN';
+  const dept=isS?null:cu.dept;
 
-  // Build summary
-  let msg = `*Noctis Hub — Resumen de Turno*\n`;
-  msg += `${dateLabel}\n`;
-  msg += `Responsable: ${cu.name} (${dept})\n\n`;
+  const lines=[];
+  lines.push('*Noctis Hub \u2014 Resumen de Turno*');
+  lines.push(dateLabel);
+  lines.push('Responsable: '+cu.name+(dept?' ('+dept+')':''));
+  lines.push('');
 
   // Checklists
-  const myTpls = TEMPLATES.filter(t => t.dept===dept);
+  const myTpls=dept?TEMPLATES.filter(t=>t.dept===dept):TEMPLATES;
   if(myTpls.length){
-    msg += `*Checklists:*\n`;
+    lines.push('*Checklists:*');
     myTpls.forEach(t=>{
-      const done=t.items.filter((_,i)=>CHK[`${t.id}-${today}-${i}`]).length;
+      const done=t.items.filter((_,i)=>CHK[t.id+'-'+today+'-'+i]).length;
       const pct=t.items.length?Math.round(done/t.items.length*100):0;
-      msg += `· ${t.name}: ${done}/${t.items.length} (${pct}%)\n`;
+      const bar=pct===100?'\u2705':pct>50?'\u26a0\ufe0f':'\u274c';
+      lines.push(bar+' '+t.name+': '+done+'/'+t.items.length+' ('+pct+'%)');
     });
-    msg += '\n';
+    lines.push('');
   }
 
-  // Incidents
-  const deptInc=INCIDENTS.filter(i=>i.dept===dept);
-  const openInc=deptInc.filter(i=>i.status==='ABIERTA').length;
-  const inProcessInc=deptInc.filter(i=>i.status==='EN_PROCESO').length;
-  const resolvedInc=deptInc.filter(i=>i.status==='RESUELTA').length;
+  // Incidencias del departamento
+  const deptInc=dept?INCIDENTS.filter(i=>i.dept===dept):INCIDENTS;
   if(deptInc.length){
-    msg += `*Incidencias:*\n`;
-    msg += `· Abiertas: ${openInc} | En proceso: ${inProcessInc} | Resueltas: ${resolvedInc}\n`;
-    const critOpen=deptInc.filter(i=>i.prio==='CRITICA'&&i.status!=='RESUELTA');
-    if(critOpen.length) msg += `⚠ Críticas pendientes: ${critOpen.map(i=>i.title).join(', ')}\n`;
-    msg += '\n';
+    const open=deptInc.filter(i=>i.status==='ABIERTA').length;
+    const inPr=deptInc.filter(i=>i.status==='EN_PROCESO').length;
+    const res=deptInc.filter(i=>i.status==='RESUELTA').length;
+    lines.push('*Incidencias:*');
+    lines.push('\u2022 Abiertas: '+open+' | En proceso: '+inPr+' | Resueltas: '+res);
+    const crit=deptInc.filter(i=>i.prio==='CRITICA'&&i.status!=='RESUELTA');
+    if(crit.length) lines.push('\u26a0\ufe0f Cr\xedticas pendientes: '+crit.map(i=>i.title).join(', '));
+    lines.push('');
   }
 
-  msg += `_Enviado desde Noctis Hub_`;
+  lines.push('_Enviado desde Noctis Hub_');
 
-  const encoded=encodeURIComponent(msg);
-  window.open(`https://wa.me/?text=${encoded}`,'_blank');
+  const msg=lines.join('\n');
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+}
+
+function requestNotifPermission(){
+  if('Notification' in window && Notification.permission === 'default'){
+    Notification.requestPermission();
+  }
+}
+
+function startAlarmChecker(){
+  if(alarmCheckerInterval) clearInterval(alarmCheckerInterval);
+  checkAlarms(); // check immediately
+  alarmCheckerInterval = setInterval(checkAlarms, 30000); // every 30 seconds
+}
+
+function checkAlarms(){
+  if(!ALARMS || !ALARMS.length) return;
+  const now = new Date();
+  ALARMS.filter(a => !a.done).forEach(a => {
+    if(!a.alarm_time) return;
+    const alarmTime = new Date(a.alarm_time);
+    const diffMs = alarmTime - now;
+    const alarmKey = a.id + '-' + a.alarm_time;
+    // Fire if within the next 60 seconds or up to 2 min past
+    if(diffMs <= 60000 && diffMs >= -120000 && !firedAlarms.has(alarmKey)){
+      firedAlarms.add(alarmKey);
+      triggerAlarmNotification(a);
+    }
+  });
+}
+
+function triggerAlarmNotification(alarm){
+  // 1. Bell badge
+  buildNotifications();
+  // 2. Sound (discrete beep using Web Audio API)
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = 'sine'; osc.frequency.value = 880;
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
+    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.5);
+    osc.start(ctx.currentTime); osc.stop(ctx.currentTime + 0.5);
+    setTimeout(()=>{
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.connect(gain2); gain2.connect(ctx.destination);
+      osc2.type = 'sine'; osc2.frequency.value = 1100;
+      gain2.gain.setValueAtTime(0, ctx.currentTime);
+      gain2.gain.linearRampToValueAtTime(0.25, ctx.currentTime+0.05);
+      gain2.gain.linearRampToValueAtTime(0, ctx.currentTime+0.4);
+      osc2.start(ctx.currentTime); osc2.stop(ctx.currentTime+0.4);
+    }, 600);
+  } catch(e){}
+  // 3. Web Push Notification (if permission granted)
+  if('Notification' in window && Notification.permission === 'granted'){
+    try {
+      new Notification('🔔 Noctis Hub — ' + alarm.title, {
+        body: alarm.note || 'Alarma programada',
+        icon: '/noctis-hub/icon-192.png',
+        badge: '/noctis-hub/icon-192.png',
+        tag: 'alarm-' + alarm.id
+      });
+    } catch(e){}
+  }
+  // 4. Toast visible in app
+  toast('🔔 ALARMA: ' + alarm.title);
 }
 
 function saveArchiveSnapshot(){
@@ -1555,11 +1663,15 @@ function incCard(inc,full=false){
   const prBadge={BAJA:'badge-gray',MEDIA:'badge-blue',ALTA:'badge-amber',CRITICA:'badge-red'}[inc.prio]||'badge-gray';
   const stBadge={ABIERTA:'badge-red',EN_PROCESO:'badge-amber',RESUELTA:'badge-green'}[inc.status]||'badge-gray';
   const stLabel={ABIERTA:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="12" cy="12" r="9"/></svg> Abierta',EN_PROCESO:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="12" cy="12" r="9"/></svg> En Proceso',RESUELTA:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><circle cx="12" cy="12" r="9"/></svg> Resuelta'}[inc.status]||inc.status;
+  const assignedIds=inc.assigned_to?JSON.parse(inc.assigned_to||'[]'):[];
+  const assignedNames=assignedIds.map(id=>{const u=USERS.find(x=>x.id===id);return u?u.name:'?';});
+  const assignedHtml=assignedIds.length?`<div style="font-size:0.706rem;color:var(--ink-muted);margin-top:4px;display:flex;align-items:center;gap:4px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="0.85em" height="0.85em" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> ${assignedNames.join(', ')}</div>`:'';
   return `<div class="inc-item" onclick="openIncidentDetail(${inc.id})">
     <div class="inc-top">
-      <div><div class="inc-title-text">${inc.title}</div><div class="inc-meta">${D_ICONS[inc.dept]||''} ${inc.dept} · ${inc.at}</div></div>
+      <div><div class="inc-title-text">${inc.title}</div><div class="inc-meta">${D_ICONS[inc.dept]||''} ${inc.dept} · ${new Date(inc.at).toLocaleDateString('es-ES')}</div></div>
       <div class="inc-badges"><span class="badge ${prBadge}">${inc.prio}</span><span class="badge ${stBadge}">${stLabel}</span></div>
     </div>
+    ${assignedHtml}
     ${full?`<div class="inc-desc">${inc.desc}</div>`:''}
   </div>`;
 }
@@ -1583,9 +1695,19 @@ function openNewIncident(){
   document.getElementById('inc-f-desc').value='';
   document.getElementById('inc-f-prio').value='MEDIA';
   document.getElementById('inc-f-status').value='ABIERTA';
+  document.getElementById('inc-f-alarm').value='';
   document.getElementById('inc-update-section').style.display='none';
   document.getElementById('modal-inc-title').textContent='Nueva Incidencia';
+  populateAssignedSelect([]);
   openModal('modal-incident');
+}
+
+function populateAssignedSelect(selectedIds){
+  const sel = document.getElementById('inc-f-assigned');
+  if(!sel) return;
+  sel.innerHTML = USERS.filter(u=>u.active).map(u=>
+    `<option value="${u.id}" ${selectedIds.includes(u.id)?'selected':''}>${u.name} (${u.dept})</option>`
+  ).join('');
 }
 
 function editIncident(id){
@@ -1601,6 +1723,9 @@ function editIncident(id){
   document.getElementById('inc-update-section').style.display='block';
   document.getElementById('modal-inc-title').textContent='Editar Incidencia';
   closeModal('modal-inc-detail');
+  document.getElementById('inc-f-alarm').value='';
+  const assignedIds=inc.assigned_to?JSON.parse(inc.assigned_to||'[]'):[];
+  populateAssignedSelect(assignedIds);
   openModal('modal-incident');
 }
 
@@ -1612,6 +1737,9 @@ async function saveIncident(){
   const status=document.getElementById('inc-f-status').value;
   const desc=document.getElementById('inc-f-desc').value.trim();
   const note=document.getElementById('inc-f-note').value.trim();
+  const assignedSel=document.getElementById('inc-f-assigned');
+  const assigned_to=assignedSel?Array.from(assignedSel.selectedOptions).map(o=>parseInt(o.value)):[];
+  const alarmTime=document.getElementById('inc-f-alarm')?.value||'';
   if(!title){toast('✗ Escribe un título');return;}
   if(id){
     const inc=INCIDENTS.find(i=>i.id===id);if(!inc)return;
@@ -1619,17 +1747,22 @@ async function saveIncident(){
     Object.assign(inc,{title,dept,prio,status,desc});
     if(note) inc.history.push({date:nowStr(),text:note+' — '+cu.name});
     if(status!==prevStatus) inc.history.push({date:nowStr(),text:'Estado: '+prevStatus+' → '+status+' por '+cu.name});
-    try{ await SB.patch('nh_incidents','?id=eq.'+id,{title,dept,prio,status,description:desc,history:inc.history,updated_at:new Date().toISOString()}); }
+    try{ await SB.patch('nh_incidents','?id=eq.'+id,{title,dept,prio,status,description:desc,history:inc.history,assigned_to:JSON.stringify(assigned_to),updated_at:new Date().toISOString()}); }
     catch(e){ toast('✗ Error Supabase'); return; }
     toast('✓ Incidencia actualizada');
   } else {
     const newInc={title,dept,prio,status:'ABIERTA',desc,history:[{date:nowStr(),text:'Creada por '+cu.name}],at:nowStr(),by:cu.id,id:IDS.inc++};
     try{
-      const [saved]=await SB.post('nh_incidents',{title,dept,prio,status:'ABIERTA',description:desc,created_by:cu.id,created_at:nowStr(),history:newInc.history});
+      const [saved]=await SB.post('nh_incidents',{title,dept,prio,status:'ABIERTA',description:desc,assigned_to:JSON.stringify(assigned_to),created_by:cu.id,created_at:nowStr(),history:newInc.history});
       if(saved) newInc.id=saved.id;
     } catch(e){ toast('✗ Error Supabase'); return; }
     INCIDENTS.unshift(newInc);
     toast('✓ Incidencia creada');
+  }
+  // Create alarm linked to incident if alarmTime is set
+  if(alarmTime){
+    const alarmObj={title:'[Inc] '+title,note:dept+' — '+(desc||'').slice(0,80),alarm_time:alarmTime,dept:dept,done:false,created_by:cu.id};
+    try{const[sa]=await SB.post('nh_alarms',alarmObj);ALARMS.unshift({...alarmObj,id:sa?sa.id:Date.now()});}catch(e){}
   }
   closeModal('modal-incident');
   buildNotifications();
@@ -1652,7 +1785,6 @@ async function quickStatus(id, status) {
   renderDashboard();
   toast(` Estado → ${status}`);
 }
-
 function renderAlarms(){
   const container=document.getElementById('alarms-list');
   if(!ALARMS.length){container.innerHTML='<div class="empty"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div><div class="empty-text">Sin alarmas programadas</div><div class="empty-sub">Crea un recordatorio con el botón de arriba</div></div>';return;}
@@ -2247,7 +2379,9 @@ function resetColors(){
 }
 
 function applyFont(val){
+  if(!val) return;
   document.documentElement.style.setProperty('--font-body', val);
+  document.body.style.fontFamily = val;
   document.querySelectorAll('body,.topbar,.sidebar,.nav-item').forEach(el => el.style.fontFamily = val);
   const sel = document.getElementById('cfg-font');
   if(sel) sel.value = val;
@@ -2257,7 +2391,8 @@ function applyFont(val){
 
 function applyFontSize(val){
   document.querySelector('html').style.fontSize = val + 'px';
-  document.getElementById('cfg-fontsize-val').textContent = val + 'px';
+  const fsVal = document.getElementById('cfg-fontsize-val');
+  if(fsVal) fsVal.textContent = val + 'px';
   const preview = document.getElementById('font-preview');
   if(preview) preview.style.fontSize = val + 'px';
 }
