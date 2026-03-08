@@ -990,6 +990,8 @@ let ALARMS = [];
 let HOTELS = [];
 let NOTIFICATIONS = [];
 let cu = null;
+let firedAlarms = new Set();
+let alarmCheckerInterval = null;
 let incFilter = 'all';
 let incDeptFilter = 'all';
 let teamDeptFilter = 'all';
@@ -1052,6 +1054,8 @@ async function loadAllData() {
     if (ALARMS.length)    IDS.alarm = Math.max(...ALARMS.map(a=>a.id)) + 1;
     if (TEMPLATES.length) IDS.tpl   = Math.max(...TEMPLATES.map(t=>t.id)) + 1;
     if (HOTELS.length)    IDS.hotel = Math.max(...HOTELS.map(h=>h.id)) + 1;
+    // Sync alarms to Service Worker (fires even with app minimized)
+    setTimeout(syncAlarmsToSW, 1000);
   } catch(e) {
     console.warn('Supabase no disponible, usando datos locales:', e.message);
   }
@@ -1090,6 +1094,11 @@ function doLogin(userObj){
 }
 
 function doLogout(){
+  // Stop alarm checker and SW heartbeat
+  if(alarmCheckerInterval){ clearInterval(alarmCheckerInterval); alarmCheckerInterval=null; }
+  if(_swHeartbeat){ clearInterval(_swHeartbeat); _swHeartbeat=null; }
+  // Clear SW alarm store so no notifications fire after logout
+  swPost({ type: 'SYNC_ALARMS', alarms: [] });
   cu = null;
   try { localStorage.removeItem('noctis_session'); } catch(e) {}
   document.getElementById('app').style.display = 'none';
@@ -1142,6 +1151,7 @@ function initApp(){
   applyConfigFromDB();
   startAlarmChecker();
   requestNotifPermission();
+  registerServiceWorker();
   navTo('dashboard');
 }
 
@@ -1168,11 +1178,15 @@ async function applyConfigFromDB(){
 
 function buildNotifications(){
   NOTIFICATIONS=[];
-  const today=new Date().toISOString().slice(0,10);
-  ALARMS.filter(a=>!a.done).forEach(a=>{
+  const isS=cu.role==='SUPER_ADMIN';
+  // Alarms: super sees all, others see their dept or own
+  const myAlarms=isS ? ALARMS : ALARMS.filter(a=>a.dept===cu.dept||a.created_by===cu.id);
+  myAlarms.filter(a=>!a.done).forEach(a=>{
     NOTIFICATIONS.push({id:IDS.notif++,type:'alarm',title:a.title,sub:a.note||a.time,color:'#d4830a',read:false,alarmId:a.id});
   });
-  INCIDENTS.filter(i=>i.prio==='CRITICA'&&i.status!=='RESUELTA').forEach(i=>{
+  // Critical incidents: super sees all, others see their dept only
+  const myCrit=isS ? INCIDENTS : INCIDENTS.filter(i=>i.dept===cu.dept);
+  myCrit.filter(i=>i.prio==='CRITICA'&&i.status!=='RESUELTA').forEach(i=>{
     NOTIFICATIONS.push({id:IDS.notif++,type:'incident',title:'CRÍTICA: '+i.title,sub:i.dept+' · '+i.at,color:'#8b1a1a',read:false,incId:i.id});
   });
 }
@@ -1181,7 +1195,7 @@ function populateSelects(){
   const allDepts=['Dirección',...DEPTS];
   const myDepts=cu.role==='SUPER_ADMIN'?allDepts:[cu.dept];
 
-  [['inc-f-dept',DEPTS],['uf-dept',allDepts],['tf-dept',DEPTS],
+  [['inc-f-dept',myDepts],['uf-dept',allDepts],['tf-dept',DEPTS],
    ['chk-dept-sel',['Todos',...DEPTS]],['arc-dept-sel',['Todos',...DEPTS]]
   ].forEach(([id,list])=>{
     const el=document.getElementById(id);
@@ -1192,8 +1206,11 @@ function populateSelects(){
 }
 
 function updateBadges(){
-  const openInc=INCIDENTS.filter(i=>i.status==='ABIERTA').length;
-  const pendAlarms=ALARMS.filter(a=>!a.done).length;
+  const isS=cu.role==='SUPER_ADMIN';
+  const myInc=isS ? INCIDENTS : INCIDENTS.filter(i=>i.dept===cu.dept||(cu.role==='EMPLOYEE'&&i.by===cu.id));
+  const myAlarms=isS ? ALARMS : ALARMS.filter(a=>a.dept===cu.dept||a.created_by===cu.id);
+  const openInc=myInc.filter(i=>i.status==='ABIERTA').length;
+  const pendAlarms=myAlarms.filter(a=>!a.done).length;
   const unread=NOTIFICATIONS.filter(n=>!n.read).length;
 
   document.getElementById('nav-inc-badge').textContent=openInc;
@@ -1210,6 +1227,13 @@ function updateBadges(){
 // NAVIGATION
 // ══════════════════════════════════════════════════════════════
 function navTo(page,el){
+  // Page access control
+  const isS=cu&&cu.role==='SUPER_ADMIN';
+  const isA=cu&&cu.role==='ADMIN';
+  const superOnly=['admin','hotels','archive'];
+  const adminPlus=['reports','team'];
+  if(superOnly.includes(page)&&!isS){toast('✗ Acceso restringido');return;}
+  if(adminPlus.includes(page)&&!isS&&!isA){toast('✗ Acceso restringido');return;}
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   if(el)el.classList.add('active');
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -1293,8 +1317,10 @@ function renderDashboard(){
   document.getElementById('dash-date').textContent=now.toLocaleDateString('es-ES',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   const today=now.toISOString().slice(0,10);
 
-  // Urgent
-  const crit=INCIDENTS.filter(i=>i.prio==='CRITICA'&&i.status!=='RESUELTA');
+  // Urgent — filter by role
+  const isS_d=cu.role==='SUPER_ADMIN';
+  const allCrit=INCIDENTS.filter(i=>i.prio==='CRITICA'&&i.status!=='RESUELTA');
+  const crit=isS_d ? allCrit : allCrit.filter(i=>i.dept===cu.dept);
   document.getElementById('dash-urgent').innerHTML=crit.map(i=>`
     <div class="urgent-banner" onclick="openIncidentDetail(${i.id})">
       <div class="banner-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
@@ -1423,6 +1449,8 @@ async function toggleChk(ck){
   const m=ck.match(/^(\d+)-(\d{4}-\d{2}-\d{2})-(\d+)$/);
   if(!m)return;
   const tplId=m[1], date=m[2], idx=parseInt(m[3]);
+  const tpl=TEMPLATES.find(t=>String(t.id)===tplId);
+  if(tpl && cu.role!=='SUPER_ADMIN' && tpl.dept!==cu.dept){toast('✗ No puedes modificar checklists de otro departamento');return;}
   if(CHK[ck]){
     delete CHK[ck];
     try{ await SB.delete('nh_checklist','?template_id=eq.'+tplId+'&date=eq.'+date+'&item_index=eq.'+idx); }catch(e){}
@@ -1719,6 +1747,9 @@ function populateAssignedSelect(selectedIds){
 function editIncident(id){
   const inc=INCIDENTS.find(i=>i.id===id);
   if(!inc)return;
+  // Only superadmin, admin of same dept, or the creator can edit
+  const canEdit=cu.role==='SUPER_ADMIN'||(cu.role==='ADMIN'&&inc.dept===cu.dept)||inc.by===cu.id;
+  if(!canEdit){toast('✗ No tienes permiso para editar esta incidencia');return;}
   document.getElementById('inc-f-id').value=id;
   document.getElementById('inc-f-title').value=inc.title;
   document.getElementById('inc-f-dept').value=inc.dept;
@@ -1747,6 +1778,8 @@ async function saveIncident(){
   const assigned_to=assignedSel?Array.from(assignedSel.selectedOptions).map(o=>parseInt(o.value)):[];
   const alarmTime=document.getElementById('inc-f-alarm')?.value||'';
   if(!title){toast('✗ Escribe un título');return;}
+  if(cu.role==='EMPLOYEE' && dept !== cu.dept){toast('✗ Solo puedes crear incidencias de tu departamento');return;}
+  if(cu.role==='ADMIN' && dept !== cu.dept){toast('✗ Solo puedes gestionar incidencias de tu departamento');return;}
   if(id){
     const inc=INCIDENTS.find(i=>i.id===id);if(!inc)return;
     const prevStatus=inc.status;
@@ -1780,6 +1813,8 @@ async function saveIncident(){
 async function quickStatus(id, status) {
   const inc = INCIDENTS.find(x => x.id===id);
   if (!inc) return;
+  const canEdit=cu.role==='SUPER_ADMIN'||(cu.role==='ADMIN'&&inc.dept===cu.dept)||inc.by===cu.id;
+  if(!canEdit){toast('✗ No tienes permiso para cambiar el estado');return;}
   inc.status = status;
   inc.history.push({ date: nowStr(), text: `Estado cambiado a ${status} por ${cu.name}` });
   try {
@@ -1793,8 +1828,11 @@ async function quickStatus(id, status) {
 }
 function renderAlarms(){
   const container=document.getElementById('alarms-list');
-  if(!ALARMS.length){container.innerHTML='<div class="empty"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div><div class="empty-text">Sin alarmas programadas</div><div class="empty-sub">Crea un recordatorio con el botón de arriba</div></div>';return;}
-  container.innerHTML=ALARMS.map(a=>`
+  const isS=cu.role==='SUPER_ADMIN';
+  // Employees and admins only see their department's alarms
+  let visibleAlarms = isS ? ALARMS : ALARMS.filter(a => a.dept===cu.dept || a.created_by===cu.id);
+  if(!visibleAlarms.length){container.innerHTML='<div class="empty"><div class="empty-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div><div class="empty-text">Sin alarmas programadas</div><div class="empty-sub">Crea un recordatorio con el botón de arriba</div></div>';return;}
+  container.innerHTML=visibleAlarms.map(a=>`
     <div class="alarm-item${a.done?' done':''}">
       <div class="alarm-left">
         <span style="font-size:20px">${a.prio==='URGENTE'?'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>':'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>'}</span>
@@ -1833,26 +1871,35 @@ async function saveAlarm(){
   }catch(e){toast('✗ Error Supabase');return;}
   closeModal('modal-alarm');
   buildNotifications();updateBadges();renderAlarms();
+  syncAlarmsToSW();
   toast('✓ Alarma creada');
 }
 
 async function doneAlarm(id){
   const a = ALARMS.find(x => x.id===id);
   if (!a) return;
+  const canAct=cu.role==='SUPER_ADMIN'||a.dept===cu.dept||a.created_by===cu.id;
+  if(!canAct){toast('✗ No tienes permiso para modificar esta alarma');return;}
   a.done = true;
   try { await SB.patch('nh_alarms', `?id=eq.${id}`, { done: true }); } catch(e) {}
   NOTIFICATIONS = NOTIFICATIONS.filter(n => n.alarmId !== id);
   updateBadges();
   renderAlarms();
+  syncAlarmsToSW();
   toast('✓ Alarma completada');
 }
 
 async function deleteAlarm(id){
+  const a = ALARMS.find(x => x.id===id);
+  if(!a) return;
+  const canAct=cu.role==='SUPER_ADMIN'||a.dept===cu.dept||a.created_by===cu.id;
+  if(!canAct){toast('✗ No tienes permiso para eliminar esta alarma');return;}
   try { await SB.delete('nh_alarms', `?id=eq.${id}`); } catch(e) { toast('✗ Error'); return; }
   ALARMS = ALARMS.filter(x => x.id !== id);
   NOTIFICATIONS = NOTIFICATIONS.filter(n => n.alarmId !== id);
   updateBadges();
   renderAlarms();
+  syncAlarmsToSW();
 }
 
 function renderTeam(){
@@ -1912,6 +1959,10 @@ async function saveUser(){
   const role=document.getElementById('uf-role').value;
   const pwd=document.getElementById('uf-pwd').value.trim();
   if(!name||!email){toast('✗ Nombre y email son obligatorios');return;}
+  // ADMIN cannot create or assign SUPER_ADMIN role
+  if(cu.role==='ADMIN' && role==='SUPER_ADMIN'){toast('✗ No tienes permiso para asignar el rol de Super Admin');return;}
+  // ADMIN can only manage users in their own department
+  if(cu.role==='ADMIN' && dept !== cu.dept){toast('✗ Solo puedes gestionar usuarios de tu departamento');return;}
   if(id){
     const u=USERS.find(x=>x.id===id);if(!u)return;
     const upd={name,email,dept,role};
@@ -1929,7 +1980,7 @@ async function saveUser(){
     USERS.push(newU);
     toast('✓ Usuario creado');
   }
-  closeModal('modal-user');renderAdmin();
+  closeModal('modal-user');renderAdmin();renderTeam();
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1973,38 +2024,12 @@ function adminTab(tab,el){
 // ══════════════════════════════════════════════════════════════
 // USERS — Supabase version
 // ══════════════════════════════════════════════════════════════
-async function saveUser(){
-  const name  = document.getElementById('uf-name').value.trim();
-  const email = document.getElementById('uf-email').value.trim();
-  const pwd   = document.getElementById('uf-pwd').value.trim();
-  const dept  = document.getElementById('uf-dept').value;
-  const role  = document.getElementById('uf-role').value;
-  const editId= parseInt(document.getElementById('uf-id').value);
-  if (!name||!email) { toast('Nombre y email son obligatorios'); return; }
-
-  if (editId) {
-    const u = USERS.find(x => x.id===editId);
-    if (!u) return;
-    const upd = { name, email, dept, role };
-    if (pwd) upd.pwd = pwd;
-    try { await SB.patch('nh_users', `?id=eq.${editId}`, upd); Object.assign(u, upd); } 
-    catch(e) { toast('✗ Error al guardar'); return; }
-  } else {
-    if (!pwd) { toast('La contraseña es obligatoria para nuevos usuarios'); return; }
-    const newUser = { name, email, pwd, dept, role, active: true };
-    try {
-      const [saved] = await SB.post('nh_users', newUser);
-      USERS.push(saved);
-    } catch(e) { toast('✗ Error al guardar (¿email duplicado?)'); return; }
-  }
-
-  closeModal('modal-user');
-  renderAdmin();
-  renderTeam();
-  toast(` Usuario ${editId?'actualizado':'creado'}`);
-}
 
 async function deactivateUser(id){
+  if(cu.role!=='SUPER_ADMIN'&&cu.role!=='ADMIN'){toast('✗ No tienes permiso');return;}
+  const u = USERS.find(x => x.id===id);
+  // ADMIN can only deactivate users from their own dept and cannot deactivate SUPER_ADMIN
+  if(cu.role==='ADMIN'&&(u?.dept!==cu.dept||u?.role==='SUPER_ADMIN')){toast('✗ No puedes desactivar a este usuario');return;}
   const u = USERS.find(x => x.id===id);
   if (u && confirm(`¿Desactivar a ${u.name}?`)) {
     try { await SB.patch('nh_users', `?id=eq.${id}`, { active: false }); u.active = false; }
@@ -2023,6 +2048,7 @@ function openNewTemplate(){ document.getElementById('tf-id').value=''; document.
 function editTemplate(id){ const t=TEMPLATES.find(x=>x.id===id);if(!t)return; document.getElementById('tf-id').value=id; document.getElementById('tf-name').value=t.name; document.getElementById('tf-dept').value=t.dept; document.getElementById('tf-shift').value=t.shift; document.getElementById('tf-items').value=t.items.join('\n'); document.getElementById('modal-tpl-title').textContent='Editar Plantilla'; openModal('modal-template'); }
 
 async function saveTemplate(){
+  if(cu.role==='EMPLOYEE'){toast('✗ No tienes permiso para crear o editar plantillas');return;}
   const id=parseInt(document.getElementById('tf-id').value)||0;
   const name=document.getElementById('tf-name').value.trim();
   const dept=document.getElementById('tf-dept').value;
@@ -2136,6 +2162,7 @@ function applyColor(key, val){
 }
 
 async function saveConfig(){
+  if(cu.role!=='SUPER_ADMIN'){toast('✗ Solo el Super Admin puede cambiar la configuración');return;}
   const fontVal = document.getElementById('cfg-font')?.value || 'Inter,sans-serif';
   const fontSizeVal = document.getElementById('cfg-fontsize')?.value || '17';
   const hotelNameVal = document.getElementById('cfg-hotel')?.value || '';
@@ -2368,6 +2395,7 @@ function exportToSheets(type){
 // ══════════════════════════════════════════════════════════════
 function openModal(id){document.getElementById(id).classList.add('open');}
 async function deleteTemplate(id){
+  if(cu.role!=='SUPER_ADMIN'){toast('✗ Solo el Super Admin puede eliminar plantillas');return;}
   if(!confirm('¿Eliminar esta plantilla?'))return;
   try{await SB.delete('nh_templates','?id=eq.'+id);}catch(e){toast('✗ Error Supabase');return;}
   TEMPLATES=TEMPLATES.filter(t=>t.id!==id);
@@ -2460,6 +2488,57 @@ window.addEventListener('resize',()=>{
   if(mb)mb.style.display=window.innerWidth<=768?'block':'none';
   if(window.innerWidth>768)closeSidebar();
 });
+
+// ══════════════════════════════════════════════════════════════
+// SERVICE WORKER — Notificaciones con app cerrada
+// ══════════════════════════════════════════════════════════════
+let _swReg = null;
+let _swHeartbeat = null;
+
+async function registerServiceWorker(){
+  if(!('serviceWorker' in navigator)) return;
+  try {
+    _swReg = await navigator.serviceWorker.register('sw.js', { scope: './' });
+    // Receive messages from SW (e.g. ALARM_FIRED)
+    navigator.serviceWorker.addEventListener('message', onSwMessage);
+    // Send initial alarm sync
+    syncAlarmsToSW();
+    // Heartbeat every 20s to keep SW alive and restart its interval if suspended
+    if(_swHeartbeat) clearInterval(_swHeartbeat);
+    _swHeartbeat = setInterval(()=>{
+      swPost({ type: 'HEARTBEAT' });
+    }, 20000);
+  } catch(e){
+    console.warn('[NoctisHub] SW registration failed:', e);
+  }
+}
+
+function swPost(msg){
+  if(!navigator.serviceWorker.controller) return;
+  navigator.serviceWorker.controller.postMessage(msg);
+}
+
+function syncAlarmsToSW(){
+  if(!ALARMS || !ALARMS.length) return;
+  const pending = ALARMS.filter(a => !a.done);
+  swPost({ type: 'SYNC_ALARMS', alarms: pending });
+}
+
+function onSwMessage(event){
+  const { type, alarmId, title } = event.data || {};
+  if(type === 'ALARM_FIRED'){
+    // SW fired a notification while app was closed/hidden — update UI on return
+    buildNotifications();
+    updateBadges();
+    // If app is visible, also show toast
+    if(!document.hidden){
+      toast('🔔 ALARMA: ' + (title || ''));
+    }
+  }
+}
+
+// Call registerServiceWorker after login (alarms are loaded by then)
+// Also re-sync whenever alarms are created or modified
 </script>
 </body>
 </html>
