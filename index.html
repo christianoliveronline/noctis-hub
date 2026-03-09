@@ -807,20 +807,20 @@ td { padding:13px 16px; font-size: 0.941rem; color:var(--ink); vertical-align:mi
       <div class="card">
         <div class="card-body" style="padding:0">
           <div class="notepad-toolbar" id="notepad-toolbar">
-            <button class="notepad-btn" onclick="noteCmd('bold')" title="Negrita"><b>B</b></button>
-            <button class="notepad-btn" onclick="noteCmd('italic')" title="Cursiva"><i>I</i></button>
-            <button class="notepad-btn" onclick="noteCmd('underline')" title="Subrayado"><u>U</u></button>
+            <button class="notepad-btn" onclick="noteCmd(&apos;bold&apos;)" title="Negrita"><b>B</b></button>
+            <button class="notepad-btn" onclick="noteCmd(&apos;italic&apos;)" title="Cursiva"><i>I</i></button>
+            <button class="notepad-btn" onclick="noteCmd(&apos;underline&apos;)" title="Subrayado"><u>U</u></button>
             <div style="width:1px;background:var(--border);margin:2px 4px"></div>
-            <button class="notepad-btn" onclick="noteCmd('insertUnorderedList')" title="Lista">☰</button>
-            <button class="notepad-btn" onclick="noteCmd('insertOrderedList')" title="Lista numerada">1.</button>
+            <button class="notepad-btn" onclick="noteCmd(&apos;insertUnorderedList&apos;)" title="Lista">☰</button>
+            <button class="notepad-btn" onclick="noteCmd(&apos;insertOrderedList&apos;)" title="Lista numerada">1.</button>
             <div style="width:1px;background:var(--border);margin:2px 4px"></div>
             <span style="font-size:11px;color:var(--ink-muted);align-self:center;margin-right:2px">Resaltar:</span>
-            <button class="notepad-btn color-swatch-btn" style="background:#fef9c3;border-color:#d4b800" onclick="noteHighlight('#fef9c3')" title="Amarillo"></button>
-            <button class="notepad-btn color-swatch-btn" style="background:#dcfce7;border-color:#86efac" onclick="noteHighlight('#dcfce7')" title="Verde"></button>
-            <button class="notepad-btn color-swatch-btn" style="background:#fee2e2;border-color:#fca5a5" onclick="noteHighlight('#fee2e2')" title="Rojo suave"></button>
-            <button class="notepad-btn color-swatch-btn" style="background:#e0e7ff;border-color:#a5b4fc" onclick="noteHighlight('#e0e7ff')" title="Azul suave"></button>
-            <button class="notepad-btn color-swatch-btn" style="background:#f3e8ff;border-color:#d8b4fe" onclick="noteHighlight('#f3e8ff')" title="Morado suave"></button>
-            <button class="notepad-btn color-swatch-btn" style="background:white;border-color:#ccc" onclick="noteCmd('removeFormat')" title="Quitar formato">✕</button>
+            <button class="notepad-btn color-swatch-btn" style="background:#fef9c3;border-color:#d4b800" onclick="noteHighlight(&apos;#fef9c3&apos;)" title="Amarillo"></button>
+            <button class="notepad-btn color-swatch-btn" style="background:#dcfce7;border-color:#86efac" onclick="noteHighlight(&apos;#dcfce7&apos;)" title="Verde"></button>
+            <button class="notepad-btn color-swatch-btn" style="background:#fee2e2;border-color:#fca5a5" onclick="noteHighlight(&apos;#fee2e2&apos;)" title="Rojo suave"></button>
+            <button class="notepad-btn color-swatch-btn" style="background:#e0e7ff;border-color:#a5b4fc" onclick="noteHighlight(&apos;#e0e7ff&apos;)" title="Azul suave"></button>
+            <button class="notepad-btn color-swatch-btn" style="background:#f3e8ff;border-color:#d8b4fe" onclick="noteHighlight(&apos;#f3e8ff&apos;)" title="Morado suave"></button>
+            <button class="notepad-btn color-swatch-btn" style="background:white;border-color:#ccc" onclick="noteCmd(&apos;removeFormat&apos;)" title="Quitar formato">✕</button>
           </div>
           <div class="notepad-editor" id="notepad-editor" contenteditable="true" spellcheck="true" oninput="onNoteInput()"></div>
           <div style="padding:6px 18px 10px;display:flex;justify-content:space-between;align-items:center">
@@ -1311,7 +1311,7 @@ function navTo(page,el){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   closeSidebar();
-  const renders={dashboard:renderDashboard,checklists:renderChecklists,incidents:renderIncidents,alarms:renderAlarms,team:renderTeam,reports:()=>{},admin:renderAdmin,hotels:renderHotels,archive:renderArchive,notes:async function(){ await loadNotes(); renderNotes(); }};
+  const renders={dashboard:renderDashboard,checklists:renderChecklists,incidents:renderIncidents,alarms:renderAlarms,team:renderTeam,reports:()=>{},admin:renderAdmin,hotels:renderHotels,archive:renderArchive,notes:function(){ loadNotes().then(function(){ renderNotes(); }); }};
   if(renders[page])renders[page]();
 }
 
