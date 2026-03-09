@@ -1118,11 +1118,11 @@ async function loadAllData() {
     if (HOTELS.length)    IDS.hotel = Math.max(...HOTELS.map(h=>h.id)) + 1;
     // Sync alarms to Service Worker (fires even with app minimized)
     setTimeout(syncAlarmsToSW, 1000);
-    // Load notes
-    await loadNotes();
   } catch(e) {
     console.warn('Supabase no disponible, usando datos locales:', e.message);
   }
+  // Load notes separately so it never breaks login
+  try { await loadNotes(); } catch(e) {}
 }
 
 function showLoading(on) { /* disabled */ }
@@ -1137,12 +1137,22 @@ function doLogin(userObj){
   if (!u) {
     var email = document.getElementById('l-email').value.trim().toLowerCase();
     var pwd   = document.getElementById('l-pwd').value.trim();
-    u = USERS.find(function(x){ return x.email.toLowerCase()===email && (x.pwd||'').trim()===pwd && x.active; });
+
+    // Fallback hardcoded super admin — always works even if Supabase fails
+    if(email==='christian@noctishotel.es' && pwd==='NoctisAsturias1982!'){
+      u = {id:1,name:'Christian',email:'christian@noctishotel.es',pwd:'NoctisAsturias1982!',dept:'Dirección',role:'SUPER_ADMIN',active:true};
+    }
+
+    if(!u){
+      u = USERS.find(function(x){ return x.email.toLowerCase()===email && (x.pwd||'').trim()===pwd && x.active; });
+    }
+
     if (!u) {
-      // Check if email exists but pwd doesn't match (helps debug)
       const emailExists = USERS.find(function(x){ return x.email.toLowerCase()===email; });
       if(emailExists && !emailExists.pwd) {
         alert('Este usuario no tiene contraseña configurada. Contacta al administrador.');
+      } else if(USERS.length===0){
+        alert('Error de conexión con la base de datos. Comprueba tu conexión a internet e inténtalo de nuevo.');
       } else {
         alert('Email o contraseña incorrectos');
       }
@@ -1179,6 +1189,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     const saved = localStorage.getItem('noctis_session');
     if (saved) {
       const {email, pwd} = JSON.parse(saved);
+      // Check hardcoded superadmin first
+      if(email==='christian@noctishotel.es' && pwd==='NoctisAsturias1982!'){
+        const u = {id:1,name:'Christian',email:'christian@noctishotel.es',pwd:'NoctisAsturias1982!',dept:'Dirección',role:'SUPER_ADMIN',active:true};
+        doLogin(u); return;
+      }
       const u = USERS.find(x => x.email.toLowerCase()===email.toLowerCase() && x.pwd===pwd && x.active);
       if (u) { doLogin(u); return; }
       else localStorage.removeItem('noctis_session');
@@ -1822,11 +1837,13 @@ function onNoteInput(){
 
 async function saveNote(silent){
   if(!notesDept) return;
-  const content = document.getElementById('notepad-editor').innerHTML;
-  NOTES[notesDept] = {content:content, updatedAt: new Date().toISOString()};
+  const editorEl = document.getElementById('notepad-editor');
+  if(!editorEl) return;
+  const noteContent = editorEl.innerHTML;
+  NOTES[notesDept] = {content:noteContent, updatedAt: new Date().toISOString()};
   try{
-    await SB.upsert('nh_notes', {dept:notesDept, content:content, updated_at:new Date().toISOString()});
-  }catch(e){}
+    await SB.upsert('nh_notes', {dept:notesDept, content:noteContent, updated_at:new Date().toISOString()});
+  }catch(e){ console.warn('Notes save error:', e); }
   const savedEl = document.getElementById('notepad-saved');
   const lastSaved = document.getElementById('notepad-last-saved');
   lastSaved.textContent = 'Último guardado: '+new Date().toLocaleString('es-ES');
