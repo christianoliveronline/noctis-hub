@@ -1703,9 +1703,15 @@ function renderDashboard(){
   const allTodayAlarms=ALARMS.filter(a=>!a.done&&a.time&&a.time.startsWith(today));
   const todayAlarms=isS_d ? allTodayAlarms : allTodayAlarms.filter(a=>a.dept===cu.dept||a.created_by===cu.id);
   document.getElementById('dash-alarms').innerHTML=todayAlarms.map(a=>`
-    <div class="alarm-banner">
-      <div class="banner-icon"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div>
-      <div><div class="banner-title" style="color:var(--amber)">${a.title}</div><div class="banner-sub" style="color:var(--amber)">${a.note||''} · ${a.time.slice(11,16)}</div></div>
+    <div class="alarm-banner" style="justify-content:space-between;align-items:center">
+      <div style="display:flex;align-items:flex-start;gap:12px;flex:1;min-width:0">
+        <div class="banner-icon" style="flex-shrink:0"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div>
+        <div style="min-width:0">
+          <div class="banner-title" style="color:var(--amber)">${a.title}</div>
+          <div class="banner-sub" style="color:var(--amber)">${a.note||''} · ${(a.time||'').slice(11,16)}</div>
+        </div>
+      </div>
+      <button onclick="markAlarmDoneFromDash(${a.id})" style="flex-shrink:0;margin-left:12px;padding:5px 12px;font-size:0.78rem;font-weight:700;background:#2e4a1e;color:white;border:none;border-radius:20px;cursor:pointer;white-space:nowrap">✓ Hecho</button>
     </div>`).join('');
 
   // KPIs
@@ -2602,6 +2608,11 @@ async function doneAlarm(id){
   renderAlarms();
   syncAlarmsToSW();
   toast('✓ Alarma completada');
+}
+
+async function markAlarmDoneFromDash(id){
+  await doneAlarm(id);
+  renderDashboard();
 }
 
 async function deleteAlarm(id){
