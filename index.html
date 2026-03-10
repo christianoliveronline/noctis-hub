@@ -3689,6 +3689,7 @@ function startRealtime() {
     console.log('🔴 Realtime conectado');
     // Join channel for each table
     const tables = ['nh_incidents','nh_checklist','nh_alarms','nh_users','nh_notes','nh_templates','nh_config'];
+    realtimeChannels = tables; // mark channels as active for diagnostics
     tables.forEach((table, i) => {
       const topic = `realtime:public:${table}`;
       const joinMsg = {
@@ -3729,6 +3730,7 @@ function startRealtime() {
     console.warn('Realtime desconectado, reconectando...');
     if (realtimeWS && realtimeWS._hb) clearInterval(realtimeWS._hb);
     realtimeWS = null;
+    realtimeChannels = [];
     scheduleRealtimeReconnect();
   };
 
