@@ -525,8 +525,8 @@ input, select, textarea { max-width:100%; }
 .modal-close { background:none; border:none; cursor:pointer; padding:4px; color:var(--ink-muted); border-radius:6px; transition:background 0.15s; display:flex; align-items:center; justify-content:center; }
 .modal-close:hover { background:var(--cream); color:var(--ink); }
 .modal-body { padding:22px 26px; flex:1; overflow-y:auto; }
-.modal-foot { padding:14px 22px 20px; border-top:1px solid var(--cream-dark); display:flex; justify-content:flex-end; gap:7px; flex-shrink:0; flex-wrap:wrap; }
-.modal-foot .btn { font-size:0.8rem; padding:6px 12px; }
+.modal-foot { padding:12px 20px 18px; border-top:1px solid var(--cream-dark); display:flex; justify-content:flex-end; gap:6px; flex-shrink:0; flex-wrap:wrap; }
+.modal-foot .btn { font-size:0.8rem; padding:6px 11px; }
 
 /* ── Mobile logout button in mobile nav ── */
 .mob-nav-logout { color:#8b1a1a !important; }
@@ -2367,7 +2367,7 @@ function populateAssignedSelect(selectedIds){
 function editIncident(id){
   const inc=INCIDENTS.find(i=>i.id===id);
   if(!inc)return;
-  // Only superadmin, admin of same dept, or the creator can edit
+  // SA: todo | Admin: su dept | Empleado: TODAS las de su dept
   const canEdit=cu.role==='SUPER_ADMIN'||(cu.role==='ADMIN'&&inc.dept===cu.dept)||(cu.role==='EMPLOYEE'&&inc.dept===cu.dept);
   if(!canEdit){toast('✗ No tienes permiso para editar esta incidencia');return;}
   document.getElementById('inc-f-id').value=id;
@@ -2385,14 +2385,15 @@ function editIncident(id){
   const deptSel2=document.getElementById('inc-f-dept');
   const statusSel2=document.getElementById('inc-f-status');
   if(cu.role==='EMPLOYEE'){
-    deptSel2.innerHTML=`<option value="${inc.dept}">${inc.dept}</option>`;
+    // Empleado: ve su dept fijo (no puede cambiarlo)
+    deptSel2.innerHTML='<option value="'+inc.dept+'">'+inc.dept+'</option>';
     deptSel2.value=inc.dept;
     deptSel2.disabled=true;
     statusSel2.disabled=false;
   } else {
     const allD=['Recepción','Housekeeping','Mantenimiento','F&B','Administración','Dirección'];
     const depts=cu.role==='SUPER_ADMIN'?allD:[cu.dept];
-    deptSel2.innerHTML=depts.map(d=>`<option value="${d}">${d}</option>`).join('');
+    deptSel2.innerHTML=depts.map(d=>'<option value="'+d+'">'+d+'</option>').join('');
     deptSel2.value=inc.dept;
     deptSel2.disabled=false;
     statusSel2.disabled=false;
@@ -2404,7 +2405,7 @@ async function saveIncident(){
   const id=parseInt(document.getElementById('inc-f-id').value)||0;
   const title=document.getElementById('inc-f-title').value.trim();
   const deptEl=document.getElementById('inc-f-dept');
-  const dept=deptEl.options[deptEl.selectedIndex]?.value || deptEl.value || cu.dept;
+  const dept=deptEl.options[deptEl.selectedIndex]?.value||deptEl.value||cu.dept;
   const prio=document.getElementById('inc-f-prio').value;
   const status=document.getElementById('inc-f-status').value;
   const desc=document.getElementById('inc-f-desc').value.trim();
@@ -2462,7 +2463,7 @@ async function quickStatus(id, status) {
   toast(` Estado → ${status}`);
 }
 async function deleteIncident(id){
-  if(cu.role==='EMPLOYEE'){toast('✗ No tienes permiso para eliminar incidencias');return;}
+  if(cu.role==='EMPLOYEE'){toast('✗ Los empleados no pueden eliminar incidencias');return;}
   const inc=INCIDENTS.find(i=>i.id===id);if(!inc)return;
   if(cu.role==='ADMIN'&&inc.dept!==cu.dept){toast('✗ Solo puedes eliminar incidencias de tu departamento');return;}
   if(!confirm('¿Eliminar "'+inc.title+'"?\nEsta acción no se puede deshacer.'))return;
@@ -2470,8 +2471,7 @@ async function deleteIncident(id){
     await SB.delete('nh_incidents','?id=eq.'+id);
     INCIDENTS=INCIDENTS.filter(i=>i.id!==id);
     closeModal('modal-inc-detail');
-    renderIncidents();
-    renderDashboard();
+    renderIncidents();renderDashboard();
     toast('✓ Incidencia eliminada');
   }catch(e){toast('✗ Error al eliminar');}
 }
@@ -3763,9 +3763,8 @@ function openIncidentDetail(id){
         <span style="color:var(--ink)">${h.text}</span>
       </div>`).join('')||'<div style="color:var(--ink-muted);font-size:0.82rem;font-style:italic">Sin historial de cambios</div>'}
     </div>`;
-  // Empleado edita TODAS las de su dpto | Admin edita las de su dpto | SA edita todas
+  // SA: edita y elimina todo | Admin: edita y elimina su dept | Empleado: edita TODAS las de su dept, no elimina
   const canEdit=cu.role==='SUPER_ADMIN'||(cu.role==='ADMIN'&&inc.dept===cu.dept)||(cu.role==='EMPLOYEE'&&inc.dept===cu.dept);
-  // Solo Admin y SA pueden eliminar
   const canDelete=cu.role==='SUPER_ADMIN'||(cu.role==='ADMIN'&&inc.dept===cu.dept);
   document.getElementById('detail-foot').innerHTML=`
     <button class="btn btn-outline" onclick="closeModal('modal-inc-detail')">Cerrar</button>
