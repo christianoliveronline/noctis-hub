@@ -1327,20 +1327,8 @@ const D_ICONS = {Recepción:'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 
 const D_COLORS = {Recepción:'#2e4a1e',Housekeeping:'#4a2e6e',Mantenimiento:'#2e3a5c','F&B':'#6e3a1e',Administración:'#3a3a2e',Dirección:'#8a6d2e'};
 
 let USERS = [
-  {id:1,  name:'Christian',       email:'christian@noctishotel.es', pwd:'NoctisAsturias1982!',  dept:'Dirección',     role:'SUPER_ADMIN', active:true},
-  {id:2,  name:'Ana García',      email:'ana@noctishotel.es',        pwd:'Noctis2024',  dept:'Recepción',     role:'ADMIN',       active:true},
-  {id:3,  name:'Sofía Martínez',  email:'sofia@noctishotel.es',      pwd:'Noctis2024',  dept:'Recepción',     role:'EMPLOYEE',    active:true},
-  {id:4,  name:'Pablo Ruiz',      email:'pablo@noctishotel.es',      pwd:'Noctis2024',  dept:'Recepción',     role:'EMPLOYEE',    active:true},
-  {id:5,  name:'Carmen López',    email:'carmen@noctishotel.es',     pwd:'Noctis2024',  dept:'Housekeeping',  role:'ADMIN',       active:true},
-  {id:6,  name:'María Torres',    email:'maria.t@noctishotel.es',    pwd:'Noctis2024',  dept:'Housekeeping',  role:'EMPLOYEE',    active:true},
-  {id:7,  name:'Laura Sánchez',   email:'laura@noctishotel.es',      pwd:'Noctis2024',  dept:'Housekeeping',  role:'EMPLOYEE',    active:true},
-  {id:8,  name:'Jorge Fernández', email:'jorge@noctishotel.es',      pwd:'Noctis2024',  dept:'Mantenimiento', role:'ADMIN',       active:true},
-  {id:9,  name:'Andrés Díaz',     email:'andres@noctishotel.es',     pwd:'Noctis2024',  dept:'Mantenimiento', role:'EMPLOYEE',    active:true},
-  {id:10, name:'Elena Moreno',    email:'elena@noctishotel.es',      pwd:'Noctis2024',  dept:'F&B',           role:'ADMIN',       active:true},
-  {id:11, name:'Roberto Jiménez', email:'roberto@noctishotel.es',    pwd:'Noctis2024',  dept:'F&B',           role:'EMPLOYEE',    active:true},
-  {id:12, name:'Patricia Vega',   email:'patricia@noctishotel.es',   pwd:'Noctis2024',  dept:'F&B',           role:'EMPLOYEE',    active:true},
-  {id:13, name:'Isabel Romero',   email:'isabel@noctishotel.es',     pwd:'Noctis2024',  dept:'Administración',role:'ADMIN',       active:true}
-];
+  {id:1, name:'Christian', email:'christian@noctishotel.es', pwd:'NoctisAsturias1982!', dept:'Dirección', role:'SUPER_ADMIN', active:true}
+]; // resto se carga desde Supabase
 let TEMPLATES = [];
 let CHK = {};       // key: "tplId-YYYY-MM-DD-itemIdx" → {user, time, dbId}
 let ARCHIVE = {};
@@ -1870,15 +1858,27 @@ function renderChkCard(t,today){
   const chkNoteText = chkNote && chkNote.content ? chkNote.content : '';
   const canNote = isS || isA || (cu.dept === t.dept);
 
+  // Determine if collapsed by default based on completion
+  const isCollapsed = pct === 100; // completed cards start collapsed
+
   return `<div class="card">
-    <div class="card-header">
-      <div><div class="card-title">${t.name}</div><div style="font-size:11px;color:var(--ink-muted);margin-top:3px">${t.shift} · ${done}/${realItems.length} completados</div></div>
-      <div style="display:flex;gap:8px;align-items:center">
+    <div class="card-header" style="cursor:pointer;user-select:none" onclick="toggleChkCard('chk-body-${t.id}','chk-arr-${t.id}',event)">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span id="chk-arr-${t.id}" style="font-size:12px;color:var(--ink-muted);transition:transform 0.2s;display:inline-block;flex-shrink:0">${isCollapsed?'▶':'▼'}</span>
+          <div>
+            <div class="card-title">${t.name}</div>
+            <div style="font-size:11px;color:var(--ink-muted);margin-top:2px">${t.shift} · ${done}/${realItems.length} completados</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center" onclick="event.stopPropagation()">
         <span class="badge ${pct===100?'badge-green':pct>0?'badge-amber':'badge-gray'}">${pct}%</span>
         ${(isS||isA)?`<button class="btn btn-outline btn-sm" onclick="editTemplate(${t.id})"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>`:''}
         ${isS?`<button class="btn btn-red btn-sm" onclick="deleteTemplate(${t.id})"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`:''}
       </div>
     </div>
+    <div id="chk-body-${t.id}" style="display:${isCollapsed?'none':'block'}">
     <div class="card-body" style="padding-top:6px">
       <div class="progress-bg" style="margin-bottom:14px"><div class="progress-fill" style="width:${pct}%"></div></div>
       ${items}
@@ -1900,7 +1900,18 @@ function renderChkCard(t,today){
         }
       </div>
     </div>
+    </div>
   </div>`;
+}
+
+function toggleChkCard(bodyId, arrId, event){
+  if(event && event.target.closest('button')) return; // don't collapse when clicking buttons
+  const body = document.getElementById(bodyId);
+  const arr = document.getElementById(arrId);
+  if(!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if(arr) arr.textContent = open ? '▶' : '▼';
 }
 
 async function toggleChk(ck){
@@ -2243,7 +2254,7 @@ function renderNotes(){
           <button class="btn btn-green btn-sm" onclick="saveSANote()">💾 Guardar</button>
         </div>`;
     } else {
-      const usersInDept = USERS.filter(u => u.dept === notesDept);
+      const usersInDept = USERS.filter(u => u.dept === notesDept && u.active !== false);
       if(!usersInDept.length){ saView.innerHTML = `<div style="color:var(--ink-muted);font-style:italic;padding:20px 0">Sin empleados en este departamento</div>`; return; }
       let html = '';
       usersInDept.forEach(function(u){
@@ -2764,7 +2775,7 @@ function renderAdmin(){
       <td><span class="badge ${roleBadge(u.role)}">${roleLabel(u.role)}</span></td>
       <td><div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn btn-outline btn-sm" onclick="editUser(${u.id})">✎ Editar</button>
-        ${u.id!==cu.id?`<button class="btn btn-red btn-sm" onclick="deactivateUser(${u.id})">Desactivar</button>`:''}
+        ${u.id!==cu.id?`<button class="btn btn-red btn-sm" onclick="deleteUser(${u.id})">Eliminar</button>`:''}
       </div></td>
     </tr>`).join('');
 
@@ -2775,7 +2786,7 @@ function renderAdmin(){
       <div class="ucm-row">${D_ICONS[u.dept]||''} <span>${u.dept}</span> · <span class="badge ${roleBadge(u.role)}" style="font-size:11px">${roleLabel(u.role)}</span></div>
       <div class="ucm-actions">
         <button class="btn btn-outline btn-sm" onclick="editUser(${u.id})">✎ Editar</button>
-        ${u.id!==cu.id?`<button class="btn btn-red btn-sm" onclick="deactivateUser(${u.id})">Desactivar</button>`:''}
+        ${u.id!==cu.id?`<button class="btn btn-red btn-sm" onclick="deleteUser(${u.id})">Eliminar</button>`:''}
       </div>
     </div>`).join('');
 
@@ -2784,19 +2795,48 @@ function renderAdmin(){
   const mobileContainer = document.getElementById('admin-users-mobile');
   if(mobileContainer) mobileContainer.innerHTML = mobileCardsHtml;
 
-  document.getElementById('admin-tpl-list').innerHTML=TEMPLATES.map(t=>`
-    <div class="card" style="margin-bottom:10px">
-      <div class="card-header">
-        <div><div class="card-title" style="font-size:17px">${t.name} — ${t.dept}</div><div style="font-size:12px;color:var(--ink-muted)">${t.shift} · ${t.items.length} items</div></div>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-outline btn-sm" onclick="editTemplate(${t.id})"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar</button>
-          <button class="btn btn-red btn-sm" onclick="deleteTemplate(${t.id})">Eliminar</button>
-        </div>
-      </div>
-      <div class="card-body" style="padding-top:6px">
-        ${t.items.map(item=>`<div style="font-size:13px;padding:6px 0;border-bottom:1px solid var(--cream-dark);color:var(--ink-light);line-height:1.5">• ${item}</div>`).join('')}
-      </div>
+  // Group by dept for admin template list
+  const tplByDept = {};
+  TEMPLATES.forEach(t=>{ if(!tplByDept[t.dept]) tplByDept[t.dept]=[]; tplByDept[t.dept].push(t); });
+  document.getElementById('admin-tpl-list').innerHTML = Object.entries(tplByDept).map(([dept,dtpls])=>`
+    <div style="margin-bottom:20px">
+      <div style="font-size:0.78rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--ink-muted);margin-bottom:8px;padding:4px 0;border-bottom:1px solid var(--border)">${dept} · ${dtpls.length} plantilla${dtpls.length!==1?'s':''}</div>
+      ${dtpls.map(t=>{
+        const realCount = t.items.filter(i=>!i.startsWith('##')).length;
+        return `<div class="card" style="margin-bottom:8px">
+          <div class="card-header" style="cursor:pointer;user-select:none" onclick="toggleAdminTpl(${t.id})">
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span id="admin-tpl-arrow-${t.id}" style="font-size:12px;color:var(--ink-muted);transition:transform 0.2s;display:inline-block">▶</span>
+                <div class="card-title" style="font-size:15px">${t.name}</div>
+              </div>
+              <div style="font-size:11px;color:var(--ink-muted);margin-top:2px;padding-left:20px">${t.shift} · ${realCount} tareas</div>
+            </div>
+            <div style="display:flex;gap:8px" onclick="event.stopPropagation()">
+              <button class="btn btn-outline btn-sm" onclick="editTemplate(${t.id})"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="#2e4a1e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-0.15em;flex-shrink:0"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar</button>
+              <button class="btn btn-red btn-sm" onclick="deleteTemplate(${t.id})">Eliminar</button>
+            </div>
+          </div>
+          <div id="admin-tpl-body-${t.id}" style="display:none">
+            <div class="card-body" style="padding-top:6px">
+              ${t.items.map(item=>item.startsWith('##')
+                ? `<div style="font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--forest);padding:8px 0 4px">${item.replace(/^##\s*/,'')}</div>`
+                : `<div style="font-size:13px;padding:5px 0;border-bottom:1px solid var(--cream-dark);color:var(--ink-light);line-height:1.5">• ${item}</div>`
+              ).join('')}
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
     </div>`).join('');
+}
+
+function toggleAdminTpl(id){
+  const body = document.getElementById('admin-tpl-body-'+id);
+  const arrow = document.getElementById('admin-tpl-arrow-'+id);
+  if(!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if(arrow) arrow.style.transform = open ? '' : 'rotate(90deg)';
 }
 
 function adminTab(tab,el){
@@ -2997,19 +3037,20 @@ async function runDiagnostics(){
 // USERS — Supabase version
 // ══════════════════════════════════════════════════════════════
 
-async function deactivateUser(id){
+async function deleteUser(id){
   if(cu.role!=='SUPER_ADMIN'&&cu.role!=='ADMIN'){toast('✗ No tienes permiso');return;}
   const u = USERS.find(x => x.id===id);
   if(!u){toast('✗ Usuario no encontrado');return;}
-  // ADMIN can only deactivate users from their own dept and cannot deactivate SUPER_ADMIN
-  if(cu.role==='ADMIN'&&(u.dept!==cu.dept||u.role==='SUPER_ADMIN')){toast('✗ No puedes desactivar a este usuario');return;}
-  if (confirm(`¿Desactivar a ${u.name}?`)) {
-    try { await SB.patch('nh_users', `?id=eq.${id}`, { active: false }); u.active = false; }
-    catch(e) { toast('✗ Error'); return; }
+  if(u.role==='SUPER_ADMIN'){toast('✗ No puedes eliminar al Super Admin');return;}
+  if(cu.role==='ADMIN'&&(u.dept!==cu.dept||u.role==='SUPER_ADMIN')){toast('✗ No puedes eliminar a este usuario');return;}
+  if(!confirm(`¿Eliminar a ${u.name} del sistema?\n\nEsta acción no se puede deshacer.`)) return;
+  try {
+    await SB.delete('nh_users', `?id=eq.${id}`);
+    USERS = USERS.filter(x => x.id !== id);
     renderAdmin();
     renderTeam();
-    toast('Usuario desactivado');
-  }
+    toast('✓ Usuario eliminado del sistema');
+  } catch(e) { toast('✗ Error al eliminar: '+(e.message||e)); }
 }
 
 
